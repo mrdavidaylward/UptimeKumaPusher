@@ -32,3 +32,9 @@ The status, packet loss, and RTT are sent to the push API of Uptime Kuma.
 Troubleshooting
 
 **Ensure that you have the correct permissions to execute the ICMP ping command.
+
+**Roadmap
+
+- Add http/s tests
+- Add tcp tests
+- Add a simple UI
