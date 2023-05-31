@@ -8,12 +8,14 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var (
 	apiKey    = flag.String("apikey", "", "API Key")
 	targetUrl = flag.String("url", "", "URL to ping")
 	apiUrl    = flag.String("kuma", "", "uptime kuma url") // API base url
+	interval  = flag.Int("interval", 60, "Interval between successive pings, in seconds")
 )
 
 func main() {
@@ -24,34 +26,44 @@ func main() {
 		return
 	}
 
-	out, err := exec.Command("ping", "-c", "3", *targetUrl).Output()
-	if err != nil {
-		fmt.Printf("Error executing ping command: %v\n", err)
-		return
-	}
+	for {
+		startTime := time.Now()
 
-	output := string(out)
-	status := "down"
-	if strings.Contains(output, "3 packets transmitted, 3 received") {
-		status = "up"
-	}
+		out, err := exec.Command("ping", "-c", "3", *targetUrl).Output()
+		if err != nil {
+			fmt.Printf("Error executing ping command: %v\n", err)
+			return
+		}
 
-	packetLossRe := regexp.MustCompile(`(\d+)% packet loss`)
-	packetLossMatch := packetLossRe.FindStringSubmatch(output)
-	packetLoss := "unknown"
-	if len(packetLossMatch) > 0 {
-		packetLoss = packetLossMatch[1]
-	}
+		pingDuration := time.Since(startTime)
 
-	rttRe := regexp.MustCompile(`rtt min/avg/max/mdev = [\d\.]+/([\d\.]+)/[\d\.]+/[\d\.]+ ms`)
-	rttMatch := rttRe.FindStringSubmatch(output)
-	pingTime := "unknown"
-	if len(rttMatch) > 0 {
-		pingTime = rttMatch[1]
-	}
+		output := string(out)
+		status := "down"
+		if strings.Contains(output, "received") {
+			status = "up"
+		}
 
-	msg := fmt.Sprintf("Packet loss: %s%%", packetLoss)
-	sendPingData(status, msg, pingTime)
+		packetLossRe := regexp.MustCompile(`(\d+)% packet loss`)
+		packetLossMatch := packetLossRe.FindStringSubmatch(output)
+		packetLoss := "unknown"
+		if len(packetLossMatch) > 0 {
+			packetLoss = packetLossMatch[1]
+		}
+
+		rttRe := regexp.MustCompile(`rtt min/avg/max/mdev = [\d\.]+/([\d\.]+)/[\d\.]+/[\d\.]+ ms`)
+		rttMatch := rttRe.FindStringSubmatch(output)
+		pingTime := "unknown"
+		if len(rttMatch) > 0 {
+			pingTime = rttMatch[1]
+		}
+
+		msg := fmt.Sprintf("Packet loss: %s%%", packetLoss)
+		sendPingData(status, msg, pingTime)
+
+		if *interval > int(pingDuration.Seconds()) {
+			time.Sleep(time.Duration(*interval-int(pingDuration.Seconds())) * time.Second)
+		}
+	}
 }
 
 func sendPingData(status string, msg string, pingTime string) {
