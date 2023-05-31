@@ -1,4 +1,4 @@
-# GoLang ICMP Ping Endpoint Tester
+# GoLang ICMP Uptime Kuma Push Endpoint Tester
 
 This application is designed to test the availability of a specific endpoint using the ICMP ping command and then send the test results to the push API of Uptime Kuma.
 
